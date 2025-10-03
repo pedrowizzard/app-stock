@@ -2,9 +2,15 @@ const form = document.getElementById("productoForm");
 const tablaBody = document.querySelector("#tablaProductos tbody");
 
 async function cargarProductos() {
-  const res = await fetch("/api/productos");
-  const data = await res.json();
-  renderProductos(data);
+  try {
+    const res = await fetch("/api/productos");
+    if (!res.ok) throw new Error("Error al obtener productos");
+    const data = await res.json();
+    console.log("📥 Productos cargados:", data);
+    renderProductos(data);
+  } catch (error) {
+    console.error("❌ Error cargando productos:", error);
+  }
 }
 
 function renderProductos(productos) {
@@ -26,44 +32,71 @@ function renderProductos(productos) {
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const nuevo = {
-    nombre: document.getElementById("nombre").value,
-    tipo: document.getElementById("tipo").value,
+    nombre: document.getElementById("nombre").value.trim(),
+    tipo: document.getElementById("tipo").value.trim(),
     cantidad: parseInt(document.getElementById("cantidad").value)
   };
 
-  await fetch("/api/productos", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(nuevo)
-  });
+  console.log("📝 Enviando producto:", nuevo);
 
-  form.reset();
-  cargarProductos();
+  try {
+    const res = await fetch("/api/productos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevo)
+    });
+
+    if (!res.ok) {
+      const errorMsg = await res.text();
+      throw new Error("Error al guardar producto: " + errorMsg);
+    }
+
+    const data = await res.json();
+    console.log("✅ Producto guardado en servidor:", data);
+
+    form.reset();
+    cargarProductos();
+  } catch (error) {
+    console.error("❌ Error al agregar producto:", error);
+    alert("Error al guardar producto. Revisa consola.");
+  }
 });
 
 async function eliminarProducto(id) {
-  await fetch(`/api/productos/${id}`, { method: "DELETE" });
-  cargarProductos();
+  console.log("🗑 Eliminando producto ID:", id);
+  try {
+    await fetch(`/api/productos/${id}`, { method: "DELETE" });
+    cargarProductos();
+  } catch (error) {
+    console.error("❌ Error eliminando producto:", error);
+  }
 }
 
 async function editarProducto(id, nombreActual, tipoActual, cantidadActual) {
+  console.log("✏️ Editando producto:", { id, nombreActual, tipoActual, cantidadActual });
+
   const nuevoNombre = prompt("Nuevo nombre del producto:", nombreActual);
   const nuevoTipo = prompt("Nuevo tipo del producto:", tipoActual);
   const nuevaCantidad = prompt("Nueva cantidad:", cantidadActual);
 
   if (nuevoNombre && nuevoTipo && nuevaCantidad !== null && !isNaN(nuevaCantidad)) {
-    await fetch(`/api/productos/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nombre: nuevoNombre,
-        tipo: nuevoTipo,
-        cantidad: parseInt(nuevaCantidad)
-      })
-    });
-    cargarProductos();
-  }
-}
+    try {
+      const res = await fetch(`/api/productos/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: nuevoNombre,
+          tipo: nuevoTipo,
+          cantidad: parseInt(nuevaCantidad)
+        })
+      });
 
-cargarProductos();
+      if (!res.ok) throw new Error("Error al editar producto");
+
+      const data = await res.json();
+      console.log("✅ Producto editado:", data);
+      cargarProductos();
+    } catch (error) {
+      console.er
